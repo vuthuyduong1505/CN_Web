@@ -16,18 +16,14 @@ Repository lưu trữ các bài tập thực hành và bài tập lớn thuộc 
 
 ```text
 CN_Web/
-└── assignment_02/             # Bài tập thực hành số 2
-    ├── index.html             # Trang chủ (phiên bản gốc)
-    ├── index_new.html         # Trang chủ đã refactor chuẩn Semantic HTML5 & SEO
-    ├── about.html             # Trang giới thiệu
-    ├── news.html              # Trang tin tức
-    ├── blog.html              # Trang bài viết blog
-    ├── register.html          # Trang form đăng ký nhận thông tin
-    ├── media.html             # Trang nội dung đa phương tiện (Video, Audio, Map, Figure)
+├── assignment_02/             # Bài tập thực hành số 2 (HTML5 Semantic, Media, Form)
+├── assignment_03/             # Bài tập thực hành số 3
+├── Assignment04/              # Bài tập thực hành số 4 (JavaScript)
+└── assignment_06/             # Bài tập thực hành số 6 (React CRUD cơ bản, Hooks, State Lifting)
+    ├── index.html             # Giao diện chính React 18 CDN, Dashboard CRUD
     ├── css/
-    │   └── style.css          # Tệp định dạng stylesheet cho toàn bộ giao diện
-    ├── images/                # Chứa hình ảnh giao diện và tư liệu bài viết
-    └── fonts/                 # Chứa phông chữ được nhúng vào website
+    │   └── style.css          # Định dạng stylesheet hiện đại, Glassmorphism, Modal
+    └── README.md              # Tài liệu chi tiết Bài tập 06
 ```
 
 ---
@@ -52,6 +48,17 @@ CN_Web/
 ### 3. Trang Chủ tối ưu HTML5 Semantic & SEO (`index_new.html`)
 - Refactor cấu trúc thẻ từ giao diện `index.html` sang chuẩn HTML5 Semantic (`<header>`, `<nav>`, `<main>`, `<article>`, `<aside>`, `<section>`, `<footer>`).
 - Bổ sung các thẻ `<meta name="description">`, `<meta name="viewport">` và thuộc tính `alt`, `aria-label` hỗ trợ SEO và khả năng truy cập (Accessibility).
+
+### 4. Bài tập 06 - Ứng dụng Quản lý người dùng React CRUD (`assignment_06/index.html`)
+- **React 18 & Babel Standalone CDN:** Khởi tạo kiến trúc Functional Components không phụ thuộc bundler.
+- **State Lifting & Props:** Quản lý tập trung `kw` (từ khóa tìm kiếm) và `newUser` tại Component `App`, đồng bộ dữ liệu giữa `SearchForm`, `AddUser` và `ResultTable`.
+- **API Integration:** Tải danh sách người dùng qua `fetch()` từ `jsonplaceholder.typicode.com/users` với `useEffect`.
+- **Thực hành CRUD hoàn chỉnh:**
+  - **Create:** Thêm người dùng với các trường lồng nhau (`address`), sao chép an toàn qua Spread Operator.
+  - **Read & Live Search:** Lọc danh sách theo `name` hoặc `username`.
+  - **Update:** Chỉnh sửa thông tin với kỹ thuật **Deep Copy** tránh đột biến dữ liệu bảng, cập nhật qua `map()`.
+  - **Delete:** Xóa người dùng bằng `filter()`.
+- **Giao diện hiện đại (Modern UI):** Phong cách Glassmorphism, card thống kê, modal overlay, avatar màu sắc và thông báo toast.
 
 ---
 

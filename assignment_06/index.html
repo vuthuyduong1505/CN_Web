@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản lý người dùng - React CRUD | Assignment 06</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22%20%22100%22%20%22100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+  
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  
+  <!-- Custom Modern Stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+
+  <!-- React 18, ReactDOM 18 & Babel Standalone via CDN (Theo yêu cầu Bước 1) -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+  <!-- Background Ambient Lights -->
+  <div class="bg-decorations">
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+  </div>
+
+  <!-- Thẻ gốc để React render (Theo yêu cầu Bước 1) -->
+  <div id="root"></div>
+
+  <!-- Mã nguồn React trong thẻ script type="text/babel" (Theo yêu cầu Bước 1) -->
+  <script type="text/babel">
+
+    // ==========================================
+    // TOAST NOTIFICATION HELPER
+    // ==========================================
+    const ToastContext = React.createContext(null);
+
+    function ToastProvider({ children }) {
+      const [toasts, setToasts] = React.useState([]);
+
+      const addToast = (message, type = "info") => {
+        const id = Date.now() + Math.random();
+        setToasts((prev) => [...prev, { id, message, type }]);
+        setTimeout(() => {
+          setToasts((prev) => prev.filter((t) => t.id !== id));
+        }, 3500);
+      };
+
+      const getIcon = (type) => {
+        switch(type) {
+          case "success": return "fa-solid fa-circle-check text-green-500";
+          case "danger": return "fa-solid fa-circle-xmark text-red-500";
+          case "warning": return "fa-solid fa-triangle-exclamation text-amber-500";
+          default: return "fa-solid fa-circle-info text-blue-500";
+        }
+      };
+
+      return (
+        <ToastContext.Provider value={{ addToast }}>
+          {children}
+          <div className="toast-container">
+            {toasts.map((t) => (
+              <div key={t.id} className={`toast ${t.type}`}>
+                <i className={getIcon(t.type)}></i>
+                <span>{t.message}</span>
+              </div>
+            ))}
+          </div>
+        </ToastContext.Provider>
+      );
+    }
+
+    // ==========================================
+    // BƯỚC 3. COMPONENT TÌM KIẾM (SEARCHFORM)
+    // Nhận prop onChangeValue để kích hoạt callback cập nhật kw ở App
+    // ==========================================
+    function SearchForm({ onChangeValue }) {
+      const [internalVal, setInternalVal] = React.useState("");
+
+      const handleInput = (e) => {
+        const val = e.target.value;
+        setInternalVal(val);
+        onChangeValue(val);
+      };
+
+      const handleClear = () => {
+        setInternalVal("");
+        onChangeValue("");
+      };
+
+      return (
+        <div className="search-form-wrapper">
+          <div className="search-input-box">
+            <i className="fa-solid fa-magnifying-glass search-icon"></i>
+            <input
+              type="text"
+              className="search-input"
+              placeholder="Tìm theo name, username..."
+              value={internalVal}
+              onChange={handleInput}
+            />
+            {internalVal && (
+              <button
+                type="button"
+                className="search-clear-btn"
+                onClick={handleClear}
+                title="Xóa tìm kiếm"
+              >
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // BƯỚC 5. COMPONENT THÊM NGƯỜI DÙNG (ADDUSER)
+    // Tạo form thêm người dùng mới, xử lý thuộc tính lồng (address)
+    // ==========================================
+    function AddUser({ onAdd }) {
+      const toast = React.useContext(ToastContext);
+      const [adding, setAdding] = React.useState(false);
+      const [user, setUser] = React.useState({
+        name: "",
+        username: "",
+        email: "",
+        address: { street: "", suite: "", city: "" },
+        phone: "",
+        website: ""
+      });
+
+      // Xử lý thuộc tính lồng (address) bằng Spread Operator
+      const handleChange = (e) => {
+        const { id, value } = e.target;
+        if (["street", "suite", "city"].includes(id)) {
+          setUser({
+            ...user,
+            address: { ...user.address, [id]: value }
+          });
+        } else {
+          setUser({ ...user, [id]: value });
+        }
+      };
+
+      const handleAdd = () => {
+        // Validation theo tài liệu
+        if (user.name.trim() === "" || user.username.trim() === "") {
+          if (toast) {
+            toast.addToast("Vui lòng nhập Họ tên và Username!", "warning");
+          } else {
+            alert("Vui lòng nhập Name và Username!");
+          }
+          return;
+        }
+
+        // Truyền dữ liệu lên App qua callback onAdd
+        onAdd(user);
+        if (toast) toast.addToast(`Đã thêm thành công người dùng "${user.name}"!`, "success");
+
+        // Reset form và đóng modal
+        setUser({
+          name: "",
+          username: "",
+          email: "",
+          address: { street: "", suite: "", city: "" },
+          phone: "",
+          website: ""
+        });
+        setAdding(false);
+      };
+
+      return (
+        <div>
+          <button
+            type="button"
+            className="btn-add-primary"
+            onClick={() => setAdding(true)}
+          >
+            <i className="fa-solid fa-user-plus"></i>
+            <span>Thêm người dùng mới</span>
+          </button>
+
+          {adding && (
+            <div className="modal-overlay" onClick={() => setAdding(false)}>
+              <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header">
+                  <div className="modal-header-title">
+                    <div className="modal-header-icon">
+                      <i className="fa-solid fa-user-plus"></i>
+                    </div>
+                    <h4>Thêm người dùng mới</h4>
+                  </div>
+                  <button
+                    type="button"
+                    className="modal-close-btn"
+                    onClick={() => setAdding(false)}
+                    title="Đóng"
+                  >
+                    <i className="fa-solid fa-xmark"></i>
+                  </button>
+                </div>
+
+                <div className="form-grid two-cols">
+                  <div className="form-group">
+                    <label htmlFor="name">
+                      Họ và tên <span className="required-star">*</span>
+                    </label>
+                    <input
+                      id="name"
+                      type="text"
+                      className="form-control"
+                      placeholder="vd: Nguyễn Văn A"
+                      value={user.name}
+                      onChange={handleChange}
+                      autoFocus
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="username">
+                      Username <span className="required-star">*</span>
+                    </label>
+                    <input
+                      id="username"
+                      type="text"
+                      className="form-control"
+                      placeholder="vd: nguyenvana"
+                      value={user.username}
+                      onChange={handleChange}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="email">Email</label>
+                    <input
+                      id="email"
+                      type="email"
+                      className="form-control"
+                      placeholder="name@example.com"
+                      value={user.email}
+                      onChange={handleChange}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="phone">Số điện thoại</label>
+                    <input
+                      id="phone"
+                      type="text"
+                      className="form-control"
+                      placeholder="0912 345 678"
+                      value={user.phone}
+                      onChange={handleChange}
+                    />
+                  </div>
+
+                  <div className="form-group full-width">
+                    <label htmlFor="website">Website</label>
+                    <input
+                      id="website"
+                      type="text"
+                      className="form-control"
+                      placeholder="example.com"
+                      value={user.website}
+                      onChange={handleChange}
+                    />
+                  </div>
+
+                  <div className="form-section-title full-width">
+                    <i className="fa-solid fa-location-dot"></i> Địa chỉ cư trú
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="street">Đường phố</label>
+                    <input
+                      id="street"
+                      type="text"
+                      className="form-control"
+                      placeholder="Tên đường..."
+                      value={user.address.street}
+                      onChange={handleChange}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="suite">Căn hộ / Số nhà</label>
+                    <input
+                      id="suite"
+                      type="text"
+                      className="form-control"
+                      placeholder="Apt. 123..."
+                      value={user.address.suite}
+                      onChange={handleChange}
+                    />
+                  </div>
+
+                  <div className="form-group full-width">
+                    <label htmlFor="city">Thành phố</label>
+                    <input
+                      id="city"
+                      type="text"
+                      className="form-control"
+                      placeholder="Hà Nội, TP.HCM..."
+                      value={user.address.city}
+                      onChange={handleChange}
+                    />
+                  </div>
+                </div>
+
+                <div className="modal-actions">
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setAdding(false)}
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-primary-action"
+                    onClick={handleAdd}
+                  >
+                    <i className="fa-solid fa-check"></i> Xác nhận thêm
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ==========================================
+    // BƯỚC 4, 6, 7. COMPONENT HIỂN THỊ DANH SÁCH & CRUD (RESULTTABLE)
+    // Tải dữ liệu từ API, lọc, sửa (deep copy), xóa
+    // ==========================================
+    function ResultTable({ keyword, user, onAdded }) {
+      const toast = React.useContext(ToastContext);
+      const [users, setUsers] = React.useState([]);
+      const [loading, setLoading] = React.useState(true);
+      const [editing, setEditing] = React.useState(null);
+      const [deletingUser, setDeletingUser] = React.useState(null);
+
+      // BƯỚC 4: Tải dữ liệu 1 lần khi component mount
+      React.useEffect(() => {
+        setLoading(true);
+        fetch("https://jsonplaceholder.typicode.com/users")
+          .then((res) => {
+            if (!res.ok) throw new Error("Lỗi khi tải dữ liệu từ máy chủ");
+            return res.json();
+          })
+          .then((data) => {
+            setUsers(data);
+            setLoading(false);
+          })
+          .catch((err) => {
+            console.error(err);
+            setLoading(false);
+            if (toast) toast.addToast("Không thể tải dữ liệu người dùng từ API!", "danger");
+          });
+      }, []);
+
+      // BƯỚC 5: Khi prop user thay đổi -> thêm vào danh sách
+      React.useEffect(() => {
+        if (user) {
+          setUsers((prev) => {
+            const nextId = prev.length > 0 ? Math.max(...prev.map((u) => u.id || 0)) + 1 : 1;
+            return [...prev, { ...user, id: nextId }];
+          });
+          onAdded();
+        }
+      }, [user]);
+
+      // BƯỚC 4: Lọc danh sách theo keyword (name hoặc username)
+      const filteredUsers = users.filter((u) => {
+        const name = (u.name || "").toLowerCase();
+        const username = (u.username || "").toLowerCase();
+        const kw = (keyword || "").toLowerCase();
+        return name.includes(kw) || username.includes(kw);
+      });
+
+      // BƯỚC 6: Sửa người dùng (Kỹ thuật Deep Copy để tránh sửa tham chiếu trực tiếp)
+      function editUser(u) {
+        setEditing({
+          ...u,
+          address: u.address ? { ...u.address } : { street: "", suite: "", city: "" }
+        });
+      }
+
+      function handleEditChange(id, value) {
+        if (["street", "suite", "city"].includes(id)) {
+          setEditing((prev) => ({
+            ...prev,
+            address: {
+              ...(prev.address || {}),
+              [id]: value
+            }
+          }));
+        } else {
+          setEditing((prev) => ({
+            ...prev,
+            [id]: value
+          }));
+        }
+      }
+
+      function saveUser() {
+        if (!editing.name || !editing.username || !editing.name.trim() || !editing.username.trim()) {
+          if (toast) {
+            toast.addToast("Vui lòng nhập Name và Username!", "warning");
+          } else {
+            alert("Vui lòng nhập Name và Username!");
+          }
+          return;
+        }
+
+        setUsers((prev) =>
+          prev.map((u) => (u.id === editing.id ? editing : u))
+        );
+        if (toast) toast.addToast(`Đã cập nhật thông tin "${editing.name}"!`, "success");
+        setEditing(null);
+      }
+
+      // BƯỚC 7: Xóa người dùng trực tiếp khỏi danh sách
+      function removeUser(id) {
+        const target = users.find((u) => u.id === id);
+        setUsers((prev) => prev.filter((u) => u.id !== id));
+        if (toast) toast.addToast(`Đã xóa người dùng "${target ? target.name : id}"!`, "danger");
+        setDeletingUser(null);
+      }
+
+      // Tạo initials cho avatar đại diện
+      const getInitials = (name) => {
+        if (!name) return "U";
+        const parts = name.trim().split(" ");
+        if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+        return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+      };
+
+      // Đếm số thành phố độc nhất
+      const uniqueCities = React.useMemo(() => {
+        const cities = users.map((u) => u.address?.city).filter(Boolean);
+        return new Set(cities).size;
+      }, [users]);
+
+      return (
+        <div>
+          {/* Quick Stats Grid */}
+          <div className="stats-grid">
+            <div className="stat-card">
+              <div className="stat-icon indigo">
+                <i className="fa-solid fa-users"></i>
+              </div>
+              <div className="stat-info">
+                <h3>{users.length}</h3>
+                <span>Tổng số người dùng</span>
+              </div>
+            </div>
+
+            <div className="stat-card">
+              <div className="stat-icon blue">
+                <i className="fa-solid fa-filter"></i>
+              </div>
+              <div className="stat-info">
+                <h3>{filteredUsers.length}</h3>
+                <span>Kết quả hiển thị</span>
+              </div>
+            </div>
+
+            <div className="stat-card">
+              <div className="stat-icon purple">
+                <i className="fa-solid fa-city"></i>
+              </div>
+              <div className="stat-info">
+                <h3>{uniqueCities}</h3>
+                <span>Thành phố đại diện</span>
+              </div>
+            </div>
+
+            <div className="stat-card">
+              <div className="stat-icon green">
+                <i className="fa-solid fa-bolt"></i>
+              </div>
+              <div className="stat-info">
+                <h3>React 18</h3>
+                <span>CRUD State Lifting</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Table Card */}
+          <div className="table-card">
+            <div className="table-header-bar">
+              <div className="table-header-title">
+                <i className="fa-solid fa-table-list text-primary"></i>
+                <span>Danh sách người dùng</span>
+                <span className="table-count-badge">
+                  {filteredUsers.length} / {users.length}
+                </span>
+              </div>
+
+              {keyword && (
+                <div style={{ fontSize: "0.825rem", color: "var(--text-muted)" }}>
+                  Đang lọc theo: <strong>"{keyword}"</strong>
+                </div>
+              )}
+            </div>
+
+            {loading ? (
+              <div className="state-container">
+                <div className="spinner"></div>
+                <div className="state-title">Đang tải dữ liệu...</div>
+                <p className="state-desc">Đang nạp danh sách người dùng từ jsonplaceholder API.</p>
+              </div>
+            ) : filteredUsers.length === 0 ? (
+              <div className="state-container">
+                <div className="state-icon">
+                  <i className="fa-solid fa-user-slash"></i>
+                </div>
+                <div className="state-title">Không tìm thấy người dùng</div>
+                <p className="state-desc">
+                  Không có người dùng nào khớp với từ khóa "<strong>{keyword}</strong>". Vui lòng thử tìm kiếm khác!
+                </p>
+              </div>
+            ) : (
+              <div className="table-responsive">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: "60px" }}>ID</th>
+                      <th>Họ tên</th>
+                      <th>Username</th>
+                      <th>Email</th>
+                      <th>Địa chỉ</th>
+                      <th>Số điện thoại</th>
+                      <th style={{ textAlign: "center", width: "160px" }}>Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredUsers.map((u) => {
+                      const hasAddress = u.address && (u.address.street || u.address.suite || u.address.city);
+                      const addressString = hasAddress
+                        ? [u.address.street, u.address.suite, u.address.city].filter(Boolean).join(", ")
+                        : "Chưa cập nhật";
+
+                      return (
+                        <tr key={u.id}>
+                          <td>
+                            <span className="user-id-badge">#{u.id}</span>
+                          </td>
+
+                          <td>
+                            <div className="user-name-cell">
+                              <div className="user-avatar">{getInitials(u.name)}</div>
+                              <div>
+                                <div className="user-name-text">{u.name}</div>
+                                {u.website && (
+                                  <small style={{ color: "var(--text-subtle)", fontSize: "0.75rem" }}>
+                                    <i className="fa-solid fa-globe" style={{ marginRight: "4px" }}></i>
+                                    {u.website}
+                                  </small>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+
+                          <td>
+                            <span className="username-tag">@{u.username}</span>
+                          </td>
+
+                          <td>
+                            {u.email ? (
+                              <a href={`mailto:${u.email}`} className="email-link">
+                                {u.email}
+                              </a>
+                            ) : (
+                              <span style={{ color: "var(--text-subtle)" }}>—</span>
+                            )}
+                          </td>
+
+                          <td>
+                            <div className="address-cell">
+                              <div>{addressString}</div>
+                              {u.address?.city && (
+                                <span className="address-city-badge">
+                                  <i className="fa-solid fa-location-dot" style={{ marginRight: "3px" }}></i>
+                                  {u.address.city}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+
+                          <td>
+                            <span className="phone-cell">
+                              {u.phone ? (
+                                <span>
+                                  <i className="fa-solid fa-phone" style={{ marginRight: "6px", color: "var(--text-subtle)", fontSize: "0.75rem" }}></i>
+                                  {u.phone}
+                                </span>
+                              ) : (
+                                "—"
+                              )}
+                            </span>
+                          </td>
+
+                          <td>
+                            <div className="action-buttons-cell" style={{ justifyContent: "center" }}>
+                              <button
+                                type="button"
+                                className="btn-action btn-edit"
+                                onClick={() => editUser(u)}
+                                title="Chỉnh sửa thông tin"
+                              >
+                                <i className="fa-solid fa-pen-to-square"></i>
+                                <span>Sửa</span>
+                              </button>
+                              <button
+                                type="button"
+                                className="btn-action btn-delete"
+                                onClick={() => setDeletingUser(u)}
+                                title="Xóa người dùng"
+                              >
+                                <i className="fa-solid fa-trash-can"></i>
+                                <span>Xóa</span>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* ============================================================== */}
+          {/* MODAL SỬA NGƯỜI DÙNG (BƯỚC 6 & BƯỚC 8: .modal-overlay, .modal-content) */}
+          {/* ============================================================== */}
+          {editing && (
+            <div className="modal-overlay" onClick={() => setEditing(null)}>
+              <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header">
+                  <div className="modal-header-title">
+                    <div className="modal-header-icon" style={{ background: "#e0f2fe", color: "#0284c7" }}>
+                      <i className="fa-solid fa-user-pen"></i>
+                    </div>
+                    <h4>Chỉnh sửa người dùng #{editing.id}</h4>
+                  </div>
+                  <button
+                    type="button"
+                    className="modal-close-btn"
+                    onClick={() => setEditing(null)}
+                    title="Đóng"
+                  >
+                    <i className="fa-solid fa-xmark"></i>
+                  </button>
+                </div>
+
+                <div className="form-grid two-cols">
+                  <div className="form-group">
+                    <label htmlFor="edit-name">
+                      Họ và tên <span className="required-star">*</span>
+                    </label>
+                    <input
+                      id="edit-name"
+                      type="text"
+                      className="form-control"
+                      value={editing.name || ""}
+                      onChange={(e) => handleEditChange("name", e.target.value)}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="edit-username">
+                      Username <span className="required-star">*</span>
+                    </label>
+                    <input
+                      id="edit-username"
+                      type="text"
+                      className="form-control"
+                      value={editing.username || ""}
+                      onChange={(e) => handleEditChange("username", e.target.value)}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="edit-email">Email</label>
+                    <input
+                      id="edit-email"
+                      type="email"
+                      className="form-control"
+                      value={editing.email || ""}
+                      onChange={(e) => handleEditChange("email", e.target.value)}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="edit-phone">Số điện thoại</label>
+                    <input
+                      id="edit-phone"
+                      type="text"
+                      className="form-control"
+                      value={editing.phone || ""}
+                      onChange={(e) => handleEditChange("phone", e.target.value)}
+                    />
+                  </div>
+
+                  <div className="form-group full-width">
+                    <label htmlFor="edit-website">Website</label>
+                    <input
+                      id="edit-website"
+                      type="text"
+                      className="form-control"
+                      value={editing.website || ""}
+                      onChange={(e) => handleEditChange("website", e.target.value)}
+                    />
+                  </div>
+
+                  <div className="form-section-title full-width">
+                    <i className="fa-solid fa-location-dot"></i> Địa chỉ cư trú
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="edit-street">Đường phố</label>
+                    <input
+                      id="edit-street"
+                      type="text"
+                      className="form-control"
+                      value={editing.address?.street || ""}
+                      onChange={(e) => handleEditChange("street", e.target.value)}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="edit-suite">Căn hộ / Số nhà</label>
+                    <input
+                      id="edit-suite"
+                      type="text"
+                      className="form-control"
+                      value={editing.address?.suite || ""}
+                      onChange={(e) => handleEditChange("suite", e.target.value)}
+                    />
+                  </div>
+
+                  <div className="form-group full-width">
+                    <label htmlFor="edit-city">Thành phố</label>
+                    <input
+                      id="edit-city"
+                      type="text"
+                      className="form-control"
+                      value={editing.address?.city || ""}
+                      onChange={(e) => handleEditChange("city", e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="modal-actions">
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setEditing(null)}
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-primary-action"
+                    onClick={saveUser}
+                  >
+                    <i className="fa-solid fa-floppy-disk"></i> Lưu thay đổi
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Modal xác nhận xóa an toàn */}
+          {deletingUser && (
+            <div className="modal-overlay" onClick={() => setDeletingUser(null)}>
+              <div className="modal-content" style={{ maxWidth: "420px", textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+                <div style={{ width: "54px", height: "54px", borderRadius: "50%", background: "#fee2e2", color: "#dc2626", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "24px", margin: "0 auto 16px" }}>
+                  <i className="fa-solid fa-triangle-exclamation"></i>
+                </div>
+                <h4 style={{ fontSize: "1.2rem", fontWeight: 700, color: "var(--text-main)", marginBottom: "8px" }}>
+                  Xác nhận xóa người dùng?
+                </h4>
+                <p style={{ fontSize: "0.9rem", color: "var(--text-muted)", marginBottom: "20px" }}>
+                  Bạn có chắc chắn muốn xóa <strong>"{deletingUser.name}"</strong> (ID: #{deletingUser.id})? Hành động này sẽ loại bỏ dữ liệu khỏi bảng.
+                </p>
+                <div className="modal-actions" style={{ justifyContent: "center", borderTop: "none", padding: 0 }}>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setDeletingUser(null)}
+                  >
+                    Hủy bỏ
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-action btn-delete"
+                    style={{ padding: "10px 20px", fontSize: "0.9rem" }}
+                    onClick={() => removeUser(deletingUser.id)}
+                  >
+                    <i className="fa-solid fa-trash-can"></i> Xác nhận xóa
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ==========================================
+    // BƯỚC 2. COMPONENT GỐC APP & QUẢN LÝ STATE TẬP TRUNG
+    // Dữ liệu cần chia sẻ (kw, newUser) lưu trữ ở App và truyền xuống qua Props
+    // ==========================================
+    function App() {
+      // 1. Quản lý toàn bộ state tập trung
+      const [kw, setKeyword] = React.useState("");
+      const [newUser, setNewUser] = React.useState(null);
+
+      return (
+        <div className="app-container">
+          {/* Header Dashboard */}
+          <header className="app-header">
+            <div className="header-title-group">
+              <div className="header-icon-box">
+                <i className="fa-solid fa-id-card-clip"></i>
+              </div>
+              <div>
+                <h1>Quản lý người dùng</h1>
+                <p>Ứng dụng React Functional Components & CRUD với API JSONPlaceholder</p>
+              </div>
+            </div>
+            <div>
+              <span className="header-badge">
+                <i className="fa-solid fa-circle-check"></i> Antigravity React 18
+              </span>
+            </div>
+          </header>
+
+          {/* Thanh công cụ: Tìm kiếm & Thêm mới */}
+          <div className="actions-toolbar">
+            <SearchForm onChangeValue={setKeyword} />
+            <AddUser onAdd={setNewUser} />
+          </div>
+
+          {/* Bảng kết quả CRUD */}
+          <ResultTable
+            keyword={kw}
+            user={newUser}
+            onAdded={() => setNewUser(null)}
+          />
+
+          {/* Footer */}
+          <footer className="app-footer">
+            <p>
+              Bài tập 06 - Lập trình React Cơ Bản (CRUD) &bull; Bộ môn Công nghệ Web &bull; Phát triển bởi <strong>Vũ Thùy Dương</strong>
+            </p>
+          </footer>
+        </div>
+      );
+    }
+
+    // BƯỚC 1. Render ứng dụng với ReactDOM.createRoot
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(
+      <ToastProvider>
+        <App />
+      </ToastProvider>
+    );
+
+  </script>
+</body>
+</html>
