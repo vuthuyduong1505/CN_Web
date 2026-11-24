@@ -343,6 +343,90 @@
       const [deletingUser, setDeletingUser] = React.useState(null);
 
       // BƯỚC 4: Tải dữ liệu 1 lần khi component mount
+      // Danh sách người dùng Việt Nam với Họ tên, Địa chỉ tiếng Việt và SĐT Việt Nam
+      const sampleVietnameseData = [
+        {
+          name: "Nguyễn Văn An",
+          username: "annguyen",
+          email: "an.nguyen@gmail.com",
+          phone: "0912 345 678",
+          website: "annguyen.vn",
+          address: { street: "124 Đường Giải Phóng", suite: "Tầng 5", city: "Hà Nội" }
+        },
+        {
+          name: "Trần Thị Mai",
+          username: "maitran",
+          email: "mai.tran@gmail.com",
+          phone: "0988 123 456",
+          website: "maitran.com",
+          address: { street: "45 Đường Lê Lợi", suite: "Phòng 302", city: "TP. Hồ Chí Minh" }
+        },
+        {
+          name: "Lê Hoàng Nam",
+          username: "namle",
+          email: "nam.le@gmail.com",
+          phone: "0903 888 999",
+          website: "namle.dev",
+          address: { street: "78 Đường Nguyễn Huệ", suite: "Căn hộ 12B", city: "Đà Nẵng" }
+        },
+        {
+          name: "Phạm Minh Tuấn",
+          username: "tuanpham",
+          email: "tuan.pham@gmail.com",
+          phone: "0977 654 321",
+          website: "tuanpham.net",
+          address: { street: "89 Đường Trần Phú", suite: "Phòng 401", city: "Hải Phòng" }
+        },
+        {
+          name: "Hoàng Thu Thảo",
+          username: "thaohoang",
+          email: "thao.hoang@gmail.com",
+          phone: "0934 567 890",
+          website: "thaohoang.vn",
+          address: { street: "12 Đường Cầu Giấy", suite: "Tầng 2", city: "Hà Nội" }
+        },
+        {
+          name: "Vũ Đình Trọng",
+          username: "trongvu",
+          email: "trong.vu@gmail.com",
+          phone: "0918 222 333",
+          website: "trongvu.tech",
+          address: { street: "56 Đường Hùng Vương", suite: "Nhà số 8", city: "Cần Thơ" }
+        },
+        {
+          name: "Đỗ Bích Ngọc",
+          username: "ngocdo",
+          email: "ngoc.do@gmail.com",
+          phone: "0982 777 888",
+          website: "ngocdo.org",
+          address: { street: "234 Đường Quang Trung", suite: "Phòng 105", city: "TP. Hồ Chí Minh" }
+        },
+        {
+          name: "Bùi Quốc Khánh",
+          username: "khanhbui",
+          email: "khanh.bui@gmail.com",
+          phone: "0969 444 555",
+          website: "khanhbui.vn",
+          address: { street: "67 Đường Đinh Tiên Hoàng", suite: "Apt. 3A", city: "Huế" }
+        },
+        {
+          name: "Đặng Phương Linh",
+          username: "linhdang",
+          email: "linh.dang@gmail.com",
+          phone: "0945 111 222",
+          website: "linhdang.com",
+          address: { street: "15 Đường Nguyễn Trãi", suite: "Tòa tháp B", city: "Hà Nội" }
+        },
+        {
+          name: "Ngô Quang Huy",
+          username: "huyngo",
+          email: "huy.ngo@gmail.com",
+          phone: "0923 888 777",
+          website: "huyngo.vn",
+          address: { street: "90 Đường Trần Hưng Đạo", suite: "Phòng 602", city: "Nha Trang" }
+        }
+      ];
+
       React.useEffect(() => {
         setLoading(true);
         fetch("https://jsonplaceholder.typicode.com/users")
@@ -351,13 +435,31 @@
             return res.json();
           })
           .then((data) => {
-            setUsers(data);
+            // Chuẩn hóa sang thông tin Họ tên, Địa chỉ tiếng Việt và SĐT Việt Nam
+            const vietnameseUsers = data.map((u, index) => {
+              const vn = sampleVietnameseData[index % sampleVietnameseData.length];
+              return {
+                ...u,
+                name: vn.name,
+                username: vn.username,
+                email: vn.email,
+                phone: vn.phone,
+                website: vn.website,
+                address: {
+                  ...u.address,
+                  street: vn.address.street,
+                  suite: vn.address.suite,
+                  city: vn.address.city
+                }
+              };
+            });
+            setUsers(vietnameseUsers);
             setLoading(false);
           })
           .catch((err) => {
             console.error(err);
+            setUsers(sampleVietnameseData.map((u, i) => ({ ...u, id: i + 1 })));
             setLoading(false);
-            if (toast) toast.addToast("Không thể tải dữ liệu người dùng từ API!", "danger");
           });
       }, []);
 
@@ -834,11 +936,6 @@
                 <h1>Quản lý người dùng</h1>
                 <p>Ứng dụng React Functional Components & CRUD với API JSONPlaceholder</p>
               </div>
-            </div>
-            <div>
-              <span className="header-badge">
-                <i className="fa-solid fa-circle-check"></i> Antigravity React 18
-              </span>
             </div>
           </header>
 
